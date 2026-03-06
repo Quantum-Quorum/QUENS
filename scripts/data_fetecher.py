@@ -4,13 +4,15 @@ from astroquery.heasarc import Heasarc
 from astropy.time import Time
 
 DATA_DIR = 'data/'
+
+
 def download_pulsar():
     hsrc = Heasarc()
 
     try:
         print("Downloading pulsar data...")
         print(hsrc.name)
-        table = hsrc.query_object("PSR J0030+0451", mission="nicermastr") # NICER observation
+        table = hsrc.query_object("PSR J0030+0451", mission="nicermastr")  # NICER observation
         ta = table['name']
         print(ta)
         print(table)
@@ -53,5 +55,23 @@ def download_pulsar():
         print(e)
 
 
+def download_proxy_gravimeter_data():
+    print("Downloading proxy Gravimeter Data (USGS Seismic CSV)...")
+    # We will use a known USGS earthquake dataset (last 30 days) as it provides a robust time-series
+    url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
+    file_path = os.path.join(DATA_DIR, 'gravity', 'usgs_proxy_gravity.csv')
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    try:
+        if not os.path.exists(file_path):
+            print(f"Downloading from: {url}")
+            urllib.request.urlretrieve(url, file_path)
+            print(f"Successfully downloaded to {file_path}")
+        else:
+            print(f"File already exists at {file_path}")
+    except Exception as e:
+        print(f"Failed to download USGS proxy data: {e}")
+
+
 if __name__ == '__main__':
     download_pulsar()
+    download_proxy_gravimeter_data()
