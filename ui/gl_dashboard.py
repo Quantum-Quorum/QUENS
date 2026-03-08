@@ -8,15 +8,36 @@ from vispy.color import Color
 
 class SpaceMapDashboard:
     def __init__(self):
-        self.canvas = scene.SceneCanvas(keys='interactive', title='QUENS - Level 2: ODIN Dashboard', show=True,
+        self.canvas = scene.SceneCanvas(keys='interactive', title='QUENS', show=True,
                                         size=(1024, 768))
         self.view = self.canvas.central_widget.add_view()
         self.view.camera = 'turntable'
         self.view.camera.scale_factor = 20.0
         self.view.bgcolor = 'black'
         self.stars = scene.visuals.Markers(parent=self.view.scene)
-        star_pos = (np.random.rand(1000, 3) - 0.5) * 100
-        self.stars.set_data(star_pos, face_color=(1, 1, 1, 0.5), size=2, symbol='o')
+
+        print("Connecting Huston for real star coordinates from Hipparcos catalog...")
+        from astroquery.vizier import Vizier
+        v = Vizier(columns=['RAICRS', 'DEICRS', 'Vmag'], row_limit=2000)
+        result = v.query_constraints(catalog='I/239/hip_main', Vmag='<5.5')
+        table = result[0]
+
+        ra = np.deg2rad(table['RAICRS'])
+        dec = np.deg2rad(table['DEICRS'])
+        r = 100.0
+        x = r * np.cos(dec) * np.cos(ra)
+        y = r * np.cos(dec) * np.sin(ra)
+        z = r * np.sin(dec)
+        star_pos = np.column_stack((x, y, z))
+
+        mags = table['Vmag']
+        normalized_brightness = np.clip(1.0 - (mags + 1.5) / 7.0, 0.1, 1.0).astype(np.float32)
+
+        colors = np.ones((len(star_pos), 4), dtype=np.float32)
+        colors[:, 3] = normalized_brightness
+        sizes = 1.0 + (normalized_brightness * 2.0)
+
+        self.stars.set_data(star_pos, face_color=colors, size=sizes, symbol='o')
         self.axis = scene.visuals.XYZAxis(parent=self.view.scene)
         self.spacecraft = scene.visuals.Markers(parent=self.view.scene)
         self.spacecraft.set_data(
